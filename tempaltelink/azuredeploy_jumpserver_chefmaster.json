@@ -1,0 +1,233 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": { 
+     "environment": {
+       "type": "string",
+       "metadata": {
+         "description": "Template implement environment tag "
+       }
+     },
+     "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "User name for the Virtual Machine."
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the Virtual Machine."
+      }
+    },
+    "jumpboxName": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique DNS Name for the Public IP used to access the Virtual Machine."
+      }
+    },
+    "jumpboxPrefix": {
+      "type": "string",
+      "defaultValue": "[concat(parameters('jumpboxName'),'-',parameters('environment'))]",
+      "metadata": {
+        "description": "Jumpbox name with environment prefix"
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "defaultValue": "[concat('vnet', parameters('environment'))]",
+      "metadata": {
+        "description": "Virtual network name"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage AccountName"
+      }
+    },
+    "storageAccountNamePrefix": {
+      "type": "string",
+      "defaultValue": "[concat(parameters('storageAccountName'),parameters('environment'))]",
+      "metadata": {
+        "description": "Storage name prefix"
+      }
+    },
+    "jumpbox": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "The flag allowing to enable or disable provisioning of the jumpbox VM"
+      }
+    },
+    "sasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Use SAS with the token"
+      }
+    }
+  },
+  "variables": { 
+    "blobUrl": "https://alexstoragetest.blob.core.windows.net/alex-test/",
+    "sharedTemplateUrl": "[concat(variables('blobUrl'), 'shared-resources.json')]",
+    "targetOSpubliser": "Openlogic",
+    "targetOSoffer": "Centos",
+    "targetOSsku": "7.2",
+    "targetOSversion": "latest",
+    "deployAPIversion": "2016-09-01",
+    "vnetAddress": "10.101.0.0/16",
+    "vnetPublicAddress": "10.101.1.0/24",
+    "vnetPrivateAddress": "10.101.2.0/24",
+    "vmsize": "Standard_D1_v2",
+    "networkSettings": {
+      "vnetName": "[parameters('virtualNetworkName')]",
+      "addressPrefix": "[variables('vnetAddress')]",
+      "subnets": {
+        "public": {
+          "name": "public",
+          "prefix": "[variables('vnetPublicAddress')]",
+          "vnet": "[parameters('virtualNetworkName')]"
+        },
+        "private": {
+          "name": "private",
+          "prefix": "[variables('vnetPrivateAddress')]",
+          "vnet": "[parameters('virtualNetworkName')]"
+        }
+      }
+    },
+    "osSettings": {
+      "imageReference": {
+        "publisher": "[variables('targetOSpubliser')]",
+        "offer": "[variables('targetOSoffer')]",
+        "sku": "[variables('targetOSsku')]",
+        "version": "[variables('targetOSversion')]"
+        }
+      },
+    "vmSettings": {
+      "vmSize": "[variables('vmsize')]",
+      "diskSize": 10
+    },
+    "storage": {
+      "name": "[parameters('storageAccountNamePrefix')]"
+    }
+   },
+  "resources": [   
+      {
+      "name": "shared",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('deployAPIversion')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('sharedTemplateUrl'), parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "commonSettings": {
+            "value": {
+              "namespace": "[parameters('environment')]"
+            }
+          },
+          "storageSettings": {
+            "value": "[variables('storage')]"
+          },
+          "networkSettings": {
+            "value": "[variables('networkSettings')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "chef-master",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('deployAPIversion')]",
+      "dependsOn": [
+        "[concat('Microsoft.Resources/deployments/', 'shared')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('blobUrl'), 'chef_centos.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "jumpboxPrefix": {
+            "value": "[parameters('jumpboxPrefix')]"
+          },
+          "osSettings": {
+            "value": "[variables('osSettings')]"
+          },
+          "subnet": {
+            "value": "[variables('networkSettings').subnets.private]"
+          },
+          "commonSettings": {
+            "value": {
+              "adminUsername": "[parameters('adminUsername')]",
+              "namespace": "[parameters('environment')]"
+            }
+          },
+          "storageSettings": {
+            "value": "[variables('storage')]"
+          },
+          "machineSettings": {
+            "value": {
+              "vmSize": "[variables('vmSettings').vmSize]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "jumpbox",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('deployAPIversion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments/', 'shared')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('blobUrl'), 'jumpbox-resources.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "storageSettings": {
+            "value": "[variables('storage')]"
+          },
+          "dnsName": {
+            "value": "[parameters('jumpboxPrefix')]"
+          },
+          "commonSettings": {
+            "value": {
+              "adminUsername": "[parameters('adminUsername')]",
+              "namespace": "[concat('jumpbox','-', parameters('environment'))]"
+            }
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "subnet": {
+            "value": "[variables('networkSettings').subnets.public]"
+          },
+          "osSettings": {
+            "value": "[variables('osSettings')]"
+          }
+        }
+      }
+    }
+
+   ],
+  "outputs": {
+
+  }
+}
