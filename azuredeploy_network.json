@@ -1,0 +1,151 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "environment": {
+          "type": "string",
+          "defaultValue": "dev",
+          "allowedValues": [
+              "prod",
+              "stg",
+              "dev"
+          ]
+      },
+      "virtualNetworkNameprefix": {
+        "type": "string",
+        "metadata": {
+          "description": "Virtual network name prefix"
+        }
+      },
+    "vnetAddressPrefix": {
+        "type": "string",
+        "metadata": {
+            "description": "Vnet prefix subnet"
+        }
+    },
+    "vnetPublicAddressPrefix": {
+        "type": "string",
+        "metadata": {
+            "description": "Vnet Public Address prefix"
+        }
+    },
+    "vnetPrivateAddressPrefix": {
+        "type": "string",
+        "metadata": {
+            "description": "Vnet Private Address Prefx"
+        }
+    },
+    "subnetName":{
+      "type": "string",
+      "metadata": {
+        "description": "Subnet Name"
+      }
+    },
+    "publicNSGnameprefix": {
+      "type": "string",
+      "metadata": {
+        "decription": "publicNSGname"
+      }
+    }
+  },
+  "variables": {
+    "virtualNetworkName": "[concat(parameters('virtualNetworkNameprefix'),'-', parameters('environment'))]",
+    "networkSettings": {
+      "vnetName": "[variables('virtualNetworkName')]",
+      "addressPrefix": "[parameters('vnetAddressPrefix')]",
+      "subnets": {
+        "public": {
+          "name": "[concat(parameters('subnetName'),'-public-',parameters('environment'))]",
+          "prefix": "[parameters('vnetPublicAddressPrefix')]",
+          "vnet": "[variables('virtualNetworkName')]"
+        },
+        "private": {
+          "name": "[concat(parameters('subnetName'),'-private-',parameters('environment'))]",
+          "prefix": "[parameters('vnetPrivateAddressPrefix')]",
+          "vnet": "[variables('virtualNetworkName')]"
+        }
+      }
+    },
+    "publicNSGname": "[concat(parameters('publicNSGnameprefix'),'-',parameters('environment'))]"
+  },
+  "resources": [
+      {
+      "apiVersion": "2016-10-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('networkSettings').vnetName]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "env": "dev",
+        "prj": "share"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('networkSettings').addressPrefix]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('networkSettings').subnets.public.name]",
+            "properties": {
+              "addressPrefix": "[variables('networkSettings').subnets.public.prefix]"
+            }
+          },
+          {
+            "name": "[variables('networkSettings').subnets.private.name]",
+            "properties": {
+              "addressPrefix": "[variables('networkSettings').subnets.private.prefix]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-10-01",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('publicNSGName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "NSG - Public Access"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-ssh",
+            "properties": {
+              "description": "Allow ssh connection",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "block-internet",
+            "properties": {
+              "description": "Block Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 200,
+              "direction": "Inbound"
+              }
+            }
+            ]
+            }
+            }
+  ],
+  "outputs": {
+    "network":{
+      "type": "object",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks',variables('networkSettings').vnetName))]"
+    }
+  }
+}

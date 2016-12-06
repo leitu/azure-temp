@@ -1,0 +1,33 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "environment": {
+        "value": "dev"
+      },
+      "virtualNetworkNameprefix": {
+        "value": "vnet"
+      },
+      "vnetAddressPrefix": {
+        "value": "10.2.0.0/16"
+      },
+      "subnetName": {
+        "value": "subnet"
+      },
+      "vnetApiAddressPrefix": {
+        "value": "10.2.1.0/24"
+      },
+      "vnetToolAddressPrefix": {
+        "value": "10.2.2.0/24"
+      },
+      "vnetInfovaultAddressPrefix": {
+        "value": "10.2.3.0/24"
+      },
+      "vnetdabaAddressPrefix": {
+        "value": "10.2.4.0/24"
+     },
+     "sharedNetworkPrefix": {
+         "value": "vnet-shared"
+     }
+  }
+}

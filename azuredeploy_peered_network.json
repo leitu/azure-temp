@@ -1,0 +1,182 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      "environment": {
+          "type": "string",
+          "defaultValue": "dev",
+          "allowedValues": [
+              "prod",
+              "stg",
+              "dev"
+          ]
+      },
+      "virtualNetworkNameprefix": {
+        "type": "string",
+        "metadata": {
+          "description": "Virtual network name prefix"
+        }
+      },
+      "subnetname": {
+        "type": "string",
+        "metadata": {
+            "description": "Virtual network subnet name"
+        }
+      },
+      "vnetAddressPrefix": {
+          "type": "string",
+          "metadata": {
+              "description": "Virtual network address prefix"
+          }
+      },
+      "vnetApiAddressPrefix": {
+          "type": "string",
+          "metadata": {
+              "description": "Vitrual network Api subnet address prefix"
+          }
+      },
+      "vnetToolAddressPrefix": {
+        "type": "string",
+        "metadata": {
+            "description": "Virtual network tool subnet address prefix"
+        }
+      },
+      "vnetInfovaultAddressPrefix": {
+          "type": "string",
+          "metadata": {
+              "description": "Virtual network infovault subnet address prefix"
+          }
+      },
+      "vnetdabaAddressPrefix": {
+          "type": "string",
+          "metadata": {
+              "description": "Virtual network dab proxy subnet address prefix"
+          }
+      },
+      "sharedNetworkPrefix": {
+          "type": "string",
+          "metadata": {
+              "description": "Shared network name"
+          }
+      }
+  },
+  "variables": {
+    "virtualNetworkName": "[concat(parameters('virtualNetworkNameprefix'),'-', parameters('environment'))]",
+    "networkSettings": {
+      "vnetName": "[variables('virtualNetworkName')]",
+      "addressPrefix": "[parameters('vnetAddressPrefix')]",
+      "subnets": {
+        "api": {
+          "name": "[concat(parameters('subnetName'),'-api-',parameters('environment'))]",
+          "prefix": "[parameters('vnetApiAddressPrefix')]",
+          "vnet": "[variables('virtualNetworkName')]"
+        },
+        "tool": {
+          "name": "[concat(parameters('subnetName'),'-tool-',parameters('environment'))]",
+          "prefix": "[parameters('vnetToolAddressPrefix')]",
+          "vnet": "[variables('virtualNetworkName')]"
+        },
+        "infovault": {
+          "name": "[concat(parameters('subnetName'),'-infovalt-tool-',parameters('environment'))]",
+          "prefix": "[parameters('vnetInfovaultAddressPrefix')]",
+          "vnet": "[variables('virtualNetworkName')]"
+        },
+        "dbaproxy": {
+          "name": "[concat(parameters('subnetName'),'-dba-proxy-',parameters('environment'))]",
+          "prefix": "[parameters('vnetdabaAddressPrefix')]",
+          "vnet": "[variables('virtualNetworkName')]"
+        }
+      },
+      "peeringname": "[concat(variables('virtualNetworkName'),'-to-',variables('sharedNetworkName'))]"
+    },
+    "sharedNetworkName": "[concat(parameters('sharedNetworkPrefix'),'-',parameters('environment'))]",
+    "sharedNetworkPeeringname": "[concat(variables('sharedNetworkName'),'-to-',variables('networkSettings').vnetName)]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2016-10-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('networkSettings').vnetName]",
+      "location": "[resourceGroup().location]",
+      "tags":{
+          "env": "dev",
+          "prj": "pvault"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('networkSettings').addressPrefix]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('networkSettings').subnets.api.name]",
+            "properties": {
+              "addressPrefix": "[variables('networkSettings').subnets.api.prefix]"
+            }
+          },
+          {
+            "name": "[variables('networkSettings').subnets.tool.name]",
+            "properties": {
+              "addressPrefix": "[variables('networkSettings').subnets.tool.prefix]"
+            }
+          },
+          {
+            "name": "[variables('networkSettings').subnets.infovault.name]",
+            "properties": {
+              "addressPrefix": "[variables('networkSettings').subnets.infovault.prefix]"
+            }
+          },
+          {
+            "name": "[variables('networkSettings').subnets.dbaproxy.name]",
+            "properties": {
+              "addressPrefix": "[variables('networkSettings').subnets.dbaproxy.prefix]"
+            }
+          }
+        ]
+      },
+      "resources": [
+        {
+            "apiVersion": "2016-10-01",
+            "type": "virtualNetworkPeerings",
+            "name": "[variables('networkSettings').peeringname]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', variables('networkSettings').vnetName)]"
+                ],
+            "comments": "This is the peering from current network to shared network",
+            "properties": {
+                "allowVirtualNetworkAccess": "true",
+                "allowForwardedTraffic": "false",
+                "allowGatewayTransit": "false",
+                "useRemoteGateways": "false",
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks',variables('sharedNetworkName'))]"
+                    }
+                }
+               }
+            ]
+    },
+    {
+        "apiVersion": "2016-10-01",
+        "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+        "name": "[concat(variables('sharedNetworkName'),'/',variables('sharedNetworkPeeringname'))]",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+          "[concat('Microsoft.Network/virtualNetworks/', variables('networkSettings').vnetName)]"
+         ],
+        "comments": "This is the peering from shared network to current network",
+        "properties": {
+           "allowVirtualNetworkAccess": "true",
+           "allowForwardedTraffic": "false",
+           "allowGatewayTransit": "false",
+           "useRemoteGateways": "false",
+           "remoteVirtualNetwork": {
+             "id": "[resourceId('Microsoft.Network/virtualNetworks',variables('networkSettings').vnetName)]"
+             }
+        }
+      }
+  ],
+  "outputs": {
+  }
+}
