@@ -1,0 +1,204 @@
+﻿{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"webSiteNamePrefix": {
+			"type": "string",
+			"metadata": {
+				"description": "Name of the Azure Web app to create."
+			}
+		},
+		"skuName": {
+			"type": "string",
+			"defaultValue": "F1",
+			"allowedValues": [
+				"F1",
+				"D1",
+				"B1",
+				"B2",
+				"B3",
+				"S1",
+				"S2",
+				"S3",
+				"P1",
+				"P2",
+				"P3",
+				"P4"
+			],
+			"metadata": {
+				"description": "Describes plan's pricing tier and instance size. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+			}
+		},
+		"skuCapacity": {
+			"type": "int",
+			"defaultValue": 1,
+			"minValue": 1,
+			"metadata": {
+				"description": "Describes plan's instance count"
+			}
+		},
+		"sqlserverNamePrefix": {
+			"type": "string",
+			"metadata": {
+				"description": "sql server Name prefix"
+			}
+		},
+		"databaseNamePrefix": {
+			"type": "string",
+			"metadata": {
+				"description": "database name prefix"
+			}
+		},
+     "sqlAdministratorLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "The admin user of the SQL Server"
+      }
+    },
+    "sqlAdministratorLoginPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the admin user of the SQL Server"
+      }
+    },
+	"aseNamePrefix": {
+		"type": "string",
+		"metadata": {
+			"description": "This is app service environement name"
+		}
+	},
+	"aseLocation": {
+		"type": "string",
+		"metadata": {
+			"description": "This is ase location"
+		}
+    },
+	"storageAccountName": {
+		"type": "string",
+		"metadata": {
+			"description": "Blob storage account"
+		}
+	},
+	"sasToken": {
+		"type": "string",
+		"metadata": {
+			"description": "This is SAS token"
+		}
+	},
+	"packageURI": {
+		"type": "string",
+		"metadata": {
+			"description": "This is deploy url"
+		}
+	}
+	},
+	"variables": {
+		"hostingPlanName": "[concat('hostingPlan','-', variables('webSiteName'))]",
+		"webSiteName": "[parameters('webSiteNamePrefix')]",
+		"sqlserverName": "[concat(parameters('sqlserverNamePrefix'),uniqueString(resourceGroup().id))]",
+		"databaseName": "[parameters('databaseNamePrefix')]",
+		"aseName": "[parameters('aseNamePrefix')]",
+		"deployuri": "[parameters('packageURI')]",
+		"storageAccountId": "[concat('/subscriptions/6649c8f8-9783-48e5-b0c4-21bd27a112ac/resourceGroups/alex-test-storage/providers/Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+	},
+	"resources": [
+	  {
+		"apiVersion": "2016-09-01",
+		"name": "[variables('hostingPlanName')]",
+		"type": "Microsoft.Web/serverfarms",
+		"location": "[parameters('aseLocation')]",
+		"tags": {
+			"displayName": "HostingPlan"
+		},
+		"dependsOn": [],
+		"sku": {
+			"name": "[parameters('skuName')]",
+			"capacity": "[parameters('skuCapacity')]"
+		},
+		"properties": {
+			"name": "[variables('hostingPlanName')]",
+			"hostingEnvironmentProfile": {
+				"id": "[resourceId('Microsoft.Web/hostingEnvironments',variables('aseName'))]"
+                }
+			
+		}
+	}, 
+	{
+		"apiVersion": "2016-08-01",
+		"name": "[variables('webSiteName')]",
+		"type": "Microsoft.Web/sites",
+		"location": "[parameters('aseLocation')]",
+		"tags": {
+			"displayName": "Website"
+		},
+		"dependsOn": [
+			"[variables('hostingPlanName')]"
+		],
+		"properties": {
+			"name": "[variables('webSiteName')]",
+			"serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+		},
+		"resources": [{
+			"apiVersion": "2016-08-01",
+			"name": "web",
+			"type": "config",
+			"dependsOn": [
+				"[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+			],
+			"properties": {
+			}
+		},
+		{
+            "name": "MSDeploy",
+            "type": "extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-08-01",
+            "dependsOn": [
+              "[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+            ],
+            "tags": {
+              "displayName": "WebAppMSDeploy"
+            },
+            "properties": {
+              "packageUri": "[variables('deployuri')]"
+            }
+          },
+			{
+			"apiVersion": "2016-08-01",
+			"name": "connectionstrings",
+			"type": "config",
+			"dependsOn": [
+				"[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+			],
+			"properties": {
+				"DefaultConnection": {
+					"value": "[concat('Data Source=tcp:', concat(variables('sqlserverName'),'.database.windows.net'),',1433;Initial Catalog=', variables('databaseName'), ';User ID=', parameters('sqlAdministratorLogin'), '@', concat(variables('sqlserverName'),'.database.windows.net'), ';Password=', parameters('sqlAdministratorLoginPassword'), ';')]",
+					"type": "SQLAzure"
+					},
+			 "BlobConnection": {
+                "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',concat(listKeys(variables('storageAccountId'),'2015-05-01-preview').key1))]",
+                "type": "Custom"
+              } 
+            }
+		},
+		{
+			"apiVersion": "2016-08-01",
+			"name": "appsettings",
+			"type": "config",
+			"dependsOn": [
+				"[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+			],
+			"properties": {
+				"test": "tear",
+				"WEBSITE_NODE_DEFAULT_VERSION": "4.4.7"
+            }
+            }
+
+			]
+	}
+
+	],
+	"outputs": {
+
+	}
+}

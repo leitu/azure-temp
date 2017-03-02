@@ -1,0 +1,45 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "aseNamePrefix": {
+            "value": "ASE"
+        },
+        "aseLocation": {
+            "value": "Japan East"
+        },
+        "ipSslAddressCount": {
+            "value": 1
+        },
+        "existingVnetNamePrefix": {
+            "value": "vnet"
+        },
+        "subnetNamePrefix": {
+            "value": "subnet"
+        },
+        "frontEndSize": {
+            "value": "Medium"
+        },
+        "frontEndCount": {
+            "value": 2
+        },
+        "workerPoolOneInstanceSize": {
+            "value": "Medium"
+        },
+        "workerPoolOneInstanceCount": {
+            "value": 2
+        },
+        "workerPoolTwoInstanceSize": {
+            "value": "Medium"
+        },
+        "workerPoolTwoInstanceCount": {
+            "value": 0
+        },
+        "workerPoolThreeInstanceSize": {
+            "value": "Medium"
+        },
+        "workerPoolThreeInstanceCount": {
+            "value": 0
+        }
+    }
+}

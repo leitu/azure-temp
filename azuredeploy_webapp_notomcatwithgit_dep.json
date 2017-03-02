@@ -1,0 +1,49 @@
+﻿{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"webSiteNamePrefix": {
+			"type": "string",
+			"metadata": {
+				"description": "Name of the Azure Web app to create."
+			}
+		}
+    },
+	"variables": {
+		"webSiteName": "[parameters('webSiteNamePrefix')]"
+	},
+	"resources": [
+	{
+		"apiVersion": "2016-08-01",
+		"name": "[variables('webSiteName')]",
+		"type": "Microsoft.Web/sites",
+		"location": "Japan East",
+		"tags": {
+			"displayName": "Website"
+		},
+		"properties": {
+			"name": "[variables('webSiteName')]",
+			"serverFarmId": "/subscriptions/8c2211b6-751f-44b8-9cea-828d8bca386a/resourceGroups/apptestRg/providers/Microsoft.Web/serverfarms/apptestSp"
+		},
+		"resources": [{
+			"apiVersion": "2016-08-01",
+			"name": "web",
+			"type": "config",
+			"dependsOn": [
+				"[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+			],
+			"properties": {
+				"scmType": "LocalGit",
+				"use32BitWorkerProcess": false,
+				"phpVersion": "Off",
+				"alwaysOn": true
+			}
+		}
+			]
+	}
+
+	],
+	"outputs": {
+
+	}
+}

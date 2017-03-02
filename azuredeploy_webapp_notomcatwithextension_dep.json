@@ -1,0 +1,74 @@
+﻿{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"webSiteNamePrefix": {
+			"type": "string",
+			"metadata": {
+				"description": "Name of the Azure Web app to create."
+			}
+		}
+    },
+	"variables": {
+		"webSiteName": "[parameters('webSiteNamePrefix')]"
+	},
+	"resources": [
+	{
+		"apiVersion": "2016-08-01",
+		"name": "[variables('webSiteName')]",
+		"type": "Microsoft.Web/sites",
+		"location": "Japan East",
+		"tags": {
+			"displayName": "Website"
+		},
+		"properties": {
+			"name": "[variables('webSiteName')]",
+			"serverFarmId": "/subscriptions/8c2211b6-751f-44b8-9cea-828d8bca386a/resourceGroups/apptestRg/providers/Microsoft.Web/serverfarms/apptestSp"
+		},
+		"resources": [{
+			"apiVersion": "2016-08-01",
+			"name": "web",
+			"type": "config",
+			"dependsOn": [
+				"[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+			],
+			"properties": {
+				"use32BitWorkerProcess": false,
+				"phpVersion": "Off",
+				"alwaysOn": true
+			}
+		},
+		{
+			"apiVersion": "2016-08-01",
+			"name": "appsettings",
+			"type": "config",
+			"dependsOn": [
+				"[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+			],
+			"properties": {
+				"test": "tear",
+				"WEBSITE_NODE_DEFAULT_VERSION": "4.4.7",
+				"Name": "SCM_SITEEXTENSIONS_FEED_URL",
+				"Value": "http://www.siteextensions.net/api/v2/"
+            }
+         },
+		 {
+          "apiVersion": "2016-08-01",
+          "name": "JavaX64",
+          "type": "siteextensions",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', variables('webSiteName'))]",
+            "[resourceId('Microsoft.Web/Sites/config', variables('webSiteName'), 'appsettings')]"
+            ],
+          "properties": { }
+        }
+
+
+			]
+	}
+
+	],
+	"outputs": {
+
+	}
+}

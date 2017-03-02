@@ -1,0 +1,42 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "aseNamePrefix": {
+      "value": "webserver-host-test-1"
+    },
+    "webSiteNamePrefix": {
+      "value": "webserver-test-1"
+    },
+    "skuName": {		
+      "value": "B1"		
+    },
+    "aseLocation": {
+      "value": "Japan East"
+    },
+    "skuCapacity": {
+      "value": 1
+    },
+    "sqlserverNamePrefix": {
+      "value": "sqlserver"
+    },
+    "databaseNamePrefix": {
+      "value": "testdb"
+    },
+     "sqlAdministratorLogin": {
+      "value": "user"
+    },
+    "sqlAdministratorLoginPassword": {		
+      "value": "Admin@1"		
+    },
+    "storageAccountName": {
+      "value": "storagetest"
+    },
+    "sasToken": {
+      "value": ""
+    },
+    "packageURI": {
+      "value": "https://storagetest.blob.core.windows.net/test/web.zip"
+    }
+  }
+}

@@ -2,20 +2,17 @@
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "environment" : {
-      "value" : "dev"
-    },
     "adminUsername": {
-      "value": "admin"
+      "value": "adminuser"
     },
     "adminPassword": {
-      "value": "admin"
+      "value": "Admin@1"
     },
     "vnetNamePrefix": {
       "value": "vnet"
     },
     "subnetNamePrefix": {
-      "value": "subnet-private"
+      "value": "subnet"
     },
     "vmNamePrefix": {
       "value": "slave"
